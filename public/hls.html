@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="referrer" content="no-referrer">
+    <title>Dailymotion Video</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+        #video-player-wrapper {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        .video-js {
+            width: 100%;
+            height: 100%;
+            position: absolute ;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
+    </style>
+</head>
+<body>
+<div id="video-player-wrapper"></div>
+
+<script src="./assets/hls.js"></script>
+<script type="text/javascript">
+    let currentPlayer = null;
+    const apiUrl = 'https://stream-url.test/api/get-stream-url';
+    let params = new URLSearchParams(window.location.search);
+    const videoId = params.get('video_id');
+    const duration = params.get("duration");
+
+    // for test x8sxpjo
+    async function fetchingUrl() {
+        return await fetch(`${apiUrl}?videoid=${videoId}&videoformats=stream_live_hls_url`)
+            .then((res) => res.json())
+            .then((data) => {
+                return data.stream_live_hls_url;
+            })
+    }
+
+    // Function to create and insert the video player into the wrapper
+    async function createVideoPlayer() {
+        const wrapper = document.getElementById('video-player-wrapper');
+
+        // Create a unique ID for the video element
+        const videoLabel = 'video-js-' + Date.now();
+
+        // Create the video element
+        const videoElement = document.createElement('video');
+        videoElement.className = 'hls-player';
+        videoElement.setAttribute('controls', true);
+        videoElement.setAttribute('preload', 'auto');
+        videoElement.id = videoLabel;
+
+        // Append the video element to the wrapper
+        wrapper.appendChild(videoElement);
+
+        // Fetch the stream URL first then render the player
+        const streamUrl = await fetchingUrl(videoId);
+        const newPlayer = videojs(videoLabel);
+        newPlayer.src(streamUrl);
+
+        // Use the player API after creation if needed
+        newPlayer.ready(function() {
+            // Attempt to play the video
+            var promise = newPlayer.play();
+
+            if (promise !== undefined) {
+                promise.then(() => {
+                    // Autoplay with sound is allowed
+                    console.log('Autoplay with sound succeeded');
+                }).catch(error => {
+                    // Autoplay with sound was blocked, mute the video and try again
+                    console.log('Autoplay with sound was blocked, muting video');
+                    newPlayer.muted(true);
+                    newPlayer.play().then(() => {
+                        console.log('Playback started after muting');
+                    }).catch(error => {
+                        console.error('Playback failed to start even after muting');
+                    });
+                });
+            } else {
+                console.log("promise undefined");
+            }
+
+            // Destroy current player when new player created in the background
+            setTimeout(() => {
+                if (currentPlayer) {
+                    currentPlayer.dispose(); // Dispose of the previous player
+                }
+                currentPlayer = newPlayer; // Update the reference to the current player
+            }, 3000); // Delay to remove current player to be replaced by new player
+        });
+
+        const localDuration = duration ? duration : 230000; // (60 * 4 - 10) * 1000
+
+        setTimeout( () => {
+            createVideoPlayer();
+        }, localDuration);
+    }
+
+    // Call the function to create and insert the video player
+    if (videoId != null) {
+        createVideoPlayer(videoId);
+    } else {
+        console.log('Video is not found');
+    }
+</script>
+</body>
+</html>
