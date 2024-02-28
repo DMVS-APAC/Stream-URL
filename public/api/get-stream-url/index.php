@@ -35,7 +35,15 @@ if (isset($_SERVER['HTTP_REFERER'])) {
 }
 
 $videoId = isset($_GET['videoid']) ? htmlspecialchars($_GET['videoid']) : '';
-$clientIp = ( $_SERVER['REMOTE_ADDR'] == '127.0.0.1') ? '182.253.50.11' : $_SERVER['REMOTE_ADDR'] ;
+
+if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
+    $clientIp = $_SERVER['HTTP_CLIENT_IP'];
+} elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+    $clientIp = $_SERVER['HTTP_X_FORWARDED_FOR'];
+} else {
+    $clientIp = ( $_SERVER['REMOTE_ADDR'] == '127.0.0.1') ? '182.253.50.99' : $_SERVER['REMOTE_ADDR'] ;
+}
+
 $videoFormats = isset($_GET['videoformats']) ? htmlspecialchars($_GET['videoformats']) : 'stream_live_hls_url';
 
 if ($videoId == '') {
@@ -69,7 +77,7 @@ function auth() {
     return json_decode($response, true)["access_token"];
 }
 
-function fetchStreamUrls(string $videoId= "x8sxpjo", string $clientIp= "182.253.50.11", string $videoFormats= "stream_live_hls_url"): string {
+function fetchStreamUrls(string $videoId, string $clientIp, string $videoFormats= "stream_live_hls_url"): string {
     $ch = curl_init(
         DAILYMOTION_API_BASE_URL . "/rest/video/{$videoId}"
         . "?client_ip={$clientIp}"
@@ -89,7 +97,10 @@ function fetchStreamUrls(string $videoId= "x8sxpjo", string $clientIp= "182.253.
  
     curl_close($ch);
 
-    return $response;
+    $json_array = json_decode($response);
+    $json_array->client_ip = $clientIp;
+
+    return json_encode($json_array);
 }
 
 echo fetchStreamUrls($videoId, $clientIp, $videoFormats);

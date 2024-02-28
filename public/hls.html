@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="referrer" content="no-referrer">
-    <title>Dailymotion Video</title>
+    <title>HLS Video</title>
     <style>
         * {
             margin: 0;
@@ -14,7 +14,7 @@
             height: 100vh;
             position: relative;
         }
-        .video-js {
+        .hls-player {
             width: 100%;
             height: 100%;
             position: absolute ;
@@ -31,7 +31,7 @@
 <script src="./assets/hls.js"></script>
 <script type="text/javascript">
     let currentPlayer = null;
-    const apiUrl = 'https://stream-url.test/api/get-stream-url';
+    const apiUrl = '/api/get-stream-url';
     let params = new URLSearchParams(window.location.search);
     const videoId = params.get('video_id');
     const duration = params.get("duration");
@@ -50,7 +50,7 @@
         const wrapper = document.getElementById('video-player-wrapper');
 
         // Create a unique ID for the video element
-        const videoLabel = 'video-js-' + Date.now();
+        const videoLabel = 'video-hls-' + Date.now();
 
         // Create the video element
         const videoElement = document.createElement('video');
@@ -64,13 +64,16 @@
 
         // Fetch the stream URL first then render the player
         const streamUrl = await fetchingUrl(videoId);
-        const newPlayer = videojs(videoLabel);
-        newPlayer.src(streamUrl);
+
+        const newPlayer = new Hls();
+        newPlayer.loadSource(streamUrl);
+        newPlayer.attachMedia(videoElement);
+
 
         // Use the player API after creation if needed
-        newPlayer.ready(function() {
+        newPlayer.on(Hls.Events.MEDIA_ATTACHED, function() {
             // Attempt to play the video
-            var promise = newPlayer.play();
+            var promise = videoElement.play();
 
             if (promise !== undefined) {
                 promise.then(() => {
@@ -79,8 +82,8 @@
                 }).catch(error => {
                     // Autoplay with sound was blocked, mute the video and try again
                     console.log('Autoplay with sound was blocked, muting video');
-                    newPlayer.muted(true);
-                    newPlayer.play().then(() => {
+                    videoElement.muted = true;
+                    videoElement.play().then(() => {
                         console.log('Playback started after muting');
                     }).catch(error => {
                         console.error('Playback failed to start even after muting');

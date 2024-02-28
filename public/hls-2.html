@@ -14,7 +14,7 @@
             height: 100vh;
             position: relative;
         }
-        .video-js {
+        .hls-player {
             width: 100%;
             height: 100%;
             position: absolute ;
@@ -28,14 +28,14 @@
 <body>
 <div id="video-player-wrapper"></div>
 
-<link href="https://vjs.zencdn.net/7.21.1/video-js.css" rel="stylesheet" />
-<script src="https://vjs.zencdn.net/7.21.1/video.min.js"></script>
+<script src="./assets/hls.js"></script>
 <script type="text/javascript">
     const apiUrl = '/api/get-stream-url';
     let params = new URLSearchParams(window.location.search);
     const videoId = params.get('video_id');
     const duration = params.get("duration");
     let newPlayer = null;
+    let videoElement = null;
 
     // for test x8sxpjo
     async function fetchingUrl() {
@@ -49,12 +49,12 @@
     // Function to create and insert the video player into the wrapper
     async function createVideoPlayer() {
         const streamUrl = await fetchingUrl(videoId);
-        newPlayer.src(streamUrl);
+        newPlayer.loadSource(streamUrl);
 
         // Use the player API after creation if needed
-        newPlayer.ready(function() {
+        newPlayer.on(Hls.Events.MEDIA_ATTACHED, function() {
             // Attempt to play the video
-            var promise = newPlayer.play();
+            var promise = videoElement.play();
 
             if (promise !== undefined) {
                 promise.then(() => {
@@ -63,8 +63,8 @@
                 }).catch(error => {
                     // Autoplay with sound was blocked, mute the video and try again
                     console.log('Autoplay with sound was blocked, muting video');
-                    newPlayer.muted(true);
-                    newPlayer.play().then(() => {
+                    videoElement.muted = true;
+                    videoElement.play().then(() => {
                         console.log('Playback started after muting');
                     }).catch(error => {
                         console.error('Playback failed to start even after muting');
@@ -88,11 +88,11 @@
         const wrapper = document.getElementById('video-player-wrapper');
 
         // Create a unique ID for the video element
-        const videoLabel = 'video-js-' + Date.now();
+        const videoLabel = 'video-hls-' + Date.now();
 
         // Create the video element
-        const videoElement = document.createElement('video');
-        videoElement.className = 'video-js vjs-default-skin';
+        videoElement = document.createElement('video');
+        videoElement.className = 'hls-player';
         videoElement.setAttribute('controls', true);
         videoElement.setAttribute('preload', 'auto');
         videoElement.id = videoLabel;
@@ -101,7 +101,8 @@
         wrapper.appendChild(videoElement);
 
         // Fetch the stream URL first then render the player
-        newPlayer = videojs(videoLabel);
+        newPlayer = new Hls();
+        newPlayer.attachMedia(videoElement);
 
         createVideoPlayer(videoId);
     } else {
