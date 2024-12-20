@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="referrer" content="no-referrer">
-  <title>Dailymotion Video</title>
+  <title>VideoJS</title>
   <style>
     * {
       margin: 0;
@@ -35,14 +35,15 @@
     const apiUrl = '/api/get-stream-url';
     let params = new URLSearchParams(window.location.search);
     const videoId = params.get('video_id');
-    const duration = params.get("duration");
+    const videoFormats = params.get('videoformats');
+    const duration = params.get("duration") ? params.get("duration") : 0;
 
     // for test x8sxpjo
     async function fetchingUrl() {
-      return await fetch(`${apiUrl}?videoid=${videoId}&videoformats=stream_live_hls_url`)
+      return await fetch(`${apiUrl}?videoid=${videoId}&videoformats=${videoFormats}`)
         .then((res) => res.json())
         .then((data) => {
-          return data.stream_live_hls_url;
+          return data[videoFormats];
         })
     }
 
@@ -58,8 +59,6 @@
         videoElement.className = 'video-js vjs-default-skin';
         videoElement.setAttribute('controls', true);
         videoElement.setAttribute('preload', 'auto');
-        // videoElement.setAttribute('width', '640');
-        // videoElement.setAttribute('height', '360');
         videoElement.id = videoLabel;
         
         // Append the video element to the wrapper
@@ -67,8 +66,10 @@
         
         // Fetch the stream URL first then render the player
         const streamUrl = await fetchingUrl(videoId);
+        // const streamUrl = "https://www.dailymotion.com/cdn/live/video/x8sxpfg.m3u8?sec=5yGcQ6xDlHB82PFIZMhYsGRBzzNH9H4Rz4c4BYdwbe5km3rKkVlH5SVrLbFwujbQ";
         const newPlayer = videojs(videoLabel);
         newPlayer.src(streamUrl);
+        newPlayer.loop(true);
 
         // Use the player API after creation if needed
         newPlayer.ready(function() {
@@ -92,21 +93,7 @@
             } else {
               console.log("promise undefined");
             }
-
-            // Destroy current player when new player created in the background
-            setTimeout(() => {
-                if (currentPlayer) {
-                    currentPlayer.dispose(); // Dispose of the previous player
-                }
-                currentPlayer = newPlayer; // Update the reference to the current player
-            }, 3000); // Delay to remove current player to be replaced by new player
         });
-
-        const localDuration = duration ? duration : 230000; // (60 * 4 - 10) * 1000
-
-        setTimeout( () => {
-          createVideoPlayer();
-        }, localDuration);
     }
     
     // Call the function to create and insert the video player

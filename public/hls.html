@@ -28,20 +28,21 @@
 <body>
 <div id="video-player-wrapper"></div>
 
-<script src="./assets/hls.js"></script>
+<script src="assets/hls.js"></script>
 <script type="text/javascript">
     let currentPlayer = null;
     const apiUrl = '/api/get-stream-url';
     let params = new URLSearchParams(window.location.search);
     const videoId = params.get('video_id');
+    const videoFormats = params.get('videoformats');
     const duration = params.get("duration");
 
     // for test x8sxpjo
     async function fetchingUrl() {
-        return await fetch(`${apiUrl}?videoid=${videoId}&videoformats=stream_live_hls_url`)
+        return await fetch(`${apiUrl}?videoid=${videoId}&videoformats=${videoFormats}`)
             .then((res) => res.json())
             .then((data) => {
-                return data.stream_live_hls_url;
+                return data[videoFormats];
             })
     }
 
@@ -55,7 +56,7 @@
         // Create the video element
         const videoElement = document.createElement('video');
         videoElement.className = 'hls-player';
-        videoElement.setAttribute('controls', true);
+        // videoElement.setAttribute('controls', false);
         videoElement.setAttribute('preload', 'auto');
         videoElement.id = videoLabel;
 
@@ -93,20 +94,12 @@
                 console.log("promise undefined");
             }
 
-            // Destroy current player when new player created in the background
-            setTimeout(() => {
-                if (currentPlayer) {
-                    currentPlayer.dispose(); // Dispose of the previous player
-                }
-                currentPlayer = newPlayer; // Update the reference to the current player
-            }, 3000); // Delay to remove current player to be replaced by new player
+            videoElement.addEventListener('ended', function () {
+                console.log('Video ended, restarting playback...');
+                videoElement.currentTime = 0; // Reset video to the beginning
+                videoElement.play(); // Restart playback
+            });
         });
-
-        const localDuration = duration ? duration : 230000; // (60 * 4 - 10) * 1000
-
-        setTimeout( () => {
-            createVideoPlayer();
-        }, localDuration);
     }
 
     // Call the function to create and insert the video player
